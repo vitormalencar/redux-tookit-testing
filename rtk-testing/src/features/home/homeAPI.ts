@@ -1,5 +1,5 @@
-export function fetchUsersRequest() {
-  return fetch("https://randomuser.me/api/?results=5").then((response) =>
-    response.json()
-  );
+export async function fetchResultsRequest() {
+  const result = await fetch("http://localhost:3001/results");
+  const data = await result.json();
+  return data;
 }

@@ -1,57 +1,109 @@
-import { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useAppDispatch, useAppSelector } from "../../app/hooks";
-import { fetchUsers, selectHomeStatus, selectUsers } from "./HomeSlice";
+import {
+  addFavorite,
+  fetchResults,
+  setSearchQuery,
+  removeFavorite,
+  selectFavorites,
+  selectHomeStatus,
+  selectFilteredResults,
+} from "./HomeSlice";
+import { Item } from "./Item";
+import { Search } from "../../components/Search";
+import { Map } from "../../components/Map";
 
 export default function Home() {
-  const users = useAppSelector(selectUsers);
-  console.log("users", users);
-  const status = useAppSelector(selectHomeStatus);
   const dispatch = useAppDispatch();
-  // request users from server
+  const [search, setSearch] = useState("");
+  const status = useAppSelector(selectHomeStatus);
+  const results = useAppSelector(selectFilteredResults);
+  const favoriteIdsList = useAppSelector(selectFavorites);
+  const [favoriteFilter, setFavoriteFilter] = useState(false);
+
+  const isInFavorites = (id: number) => {
+    return favoriteIdsList.includes(id);
+  };
+
+  const resultsList = favoriteFilter
+    ? results.filter((result) => isInFavorites(result.id))
+    : results;
+
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearch(e.target.value);
+  };
+
+  const handleToggleFavorite = (id: number) => {
+    favoriteIdsList.includes(id)
+      ? dispatch(removeFavorite(id))
+      : dispatch(addFavorite(id));
+  };
+
   useEffect(() => {
-    dispatch(fetchUsers());
-  }, []);
+    dispatch(fetchResults());
+  }, [dispatch]);
+
+  useEffect(() => {
+    dispatch(setSearchQuery(search));
+  }, [search, dispatch]);
+
+  if (status === "loading") {
+    return (
+      <div className="py-10 px-2 h-screen bg-gray-200">
+        <div className="overflow-hidden mx-auto max-w-md bg-gray-100 rounded-lg shadow-lg md:max-w-lg">
+          <div className="md:flex">
+            <div className="p-4 w-full">
+              <div>Loading...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="py-10 h-screen bg-gray-300 px-2">
-      <div className="max-w-md mx-auto bg-gray-100 shadow-lg rounded-lg overflow-hidden md:max-w-lg">
-        <div className="md:flex">
-          <div className="w-full p-4">
-            <div className="relative">
-              <input
-                type="text"
-                className="w-full h-12 rounded focus:outline-none px-3 focus:shadow-md"
-                placeholder="Search..."
-              />
-              <i className="fa fa-search absolute right-3 top-4 text-gray-300" />
+    <div className="py-10 px-2 bg-gray-200">
+      <div>
+        <div className="flex flex-col lg:flex-row">
+          <div className="mxw-12 flex-1">
+            <div className="flex justify-between items-center">
+              <Search onChangeHandle={handleSearch} />
+              <div>
+                <button
+                  className="py-2 px-4 h-12 font-bold text-white bg-blue-500 rounded hover:bg-blue-700 focus:outline-none focus:shadow-outline"
+                  onClick={() => setFavoriteFilter(!favoriteFilter)}
+                >
+                  {favoriteFilter ? "Show All" : "Show Favorites"}
+                </button>
+              </div>
             </div>
-            <ul>
-              {users.map((user) => (
-                <li className="flex justify-between items-center bg-white mt-2 p-2 hover:shadow-lg rounded cursor-pointer transition">
-                  <div className="flex ml-2">
-                    <img
-                      src={user.picture.large}
-                      width={40}
-                      height={40}
-                      className="rounded-full"
-                      alt="Avatar"
-                    />
-                    <div className="flex flex-col ml-2">
-                      <span className="font-medium text-black">
-                        {user.name.first}
-                      </span>
-                      <span className="text-sm text-gray-400 truncate w-32">
-                        {user.nat}
-                      </span>
-                    </div>
+            <ul
+              className="max-h-screen overflow-scroll"
+              data-testid="result-list"
+            >
+              {resultsList.length === 0 && (
+                <div className="py-2">
+                  <div className="p-4 bg-white rounded-lg ">
+                    <div className="text-center text-xl">No results found</div>
                   </div>
-                  <div className="flex flex-col items-center">
-                    <span className="text-gray-300">11:26</span>
-                    <i className="fa fa-star text-green-400" />
-                  </div>
+                </div>
+              )}
+              {resultsList.map((result, index) => (
+                <li key={index}>
+                  <Item
+                    name={result.name}
+                    title={result.place}
+                    image={result.image}
+                    price={result.price}
+                    isFavorite={isInFavorites(result.id)}
+                    onCLickHandle={() => handleToggleFavorite(result.id)}
+                  />
                 </li>
               ))}
             </ul>
+          </div>
+          <div className="pt-2 px-8 items-center max-w-[800px] h-screen">
+            <Map />
           </div>
         </div>
       </div>
